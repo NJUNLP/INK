@@ -1,18 +1,18 @@
+declare -A DSTORE_SIZE FFN KD_WEIGHT KNN_WEIGHT K
+DSTORE_SIZE[medical]=6903141; DSTORE_SIZE[law]=19062738; DSTORE_SIZE[it]=3613334; DSTORE_SIZE[koran]=524374
+FFN_SIZE[medical]=4096; FFN_SIZE[law]=8192; FFN_SIZE[it]=2048; FFN_SIZE[koran]=256
+KNN_WEIGHT[medical]=0.1 ; KNN_WEIGHT[law]=0.2; KNN_WEIGHT[it]=0.1; KNN_WEIGHT[koran]=0.2
+KD_WEIGHT[medical]=0.1; KD_WEIGHT[law]=0.2; KD_WEIGHT[it]=0.1; KD_WEIGHT[koran]=0.2
+K[medical]=32; K[law]=32; K[it]=32 K[koran]=64
+
 DOMAIN=medical
-K=32
-KD_WEIGHT=0.1
-KNN_WEIGHT=0.1
 TYPE=kd_plus_cos
-FFN=4096
 METRIC=l2
 MAX_PATIENCE=10
 
-declare -A DSTORE_SIZE
-DSTORE_SIZE[medical]=6903141; DSTORE_SIZE[law]=19062738; DSTORE_SIZE[it]=3613334; DSTORE_SIZE[koran]=524374
-
 DATA_PATH=/root/data-bin/opus/$DOMAIN
 PRETRAIN_MODEL_PATH=/root/checkpoints/wmt19/de-en/wmt19.de-en.ffn8192.pt
-SAVE_DIR=/root/checkpoints/opus/$DOMAIN/adapter-ffn-$FFN-knn-metric-$METRIC-knn-loss-k-$K-type-$TYPE-kd-weight-$KD_WEIGHT-knn-weight-$KNN_WEIGHT-ckpt-avg
+SAVE_DIR=/root/checkpoints/opus/$DOMAIN/adapter-ffn-${FFN[$DOMAIN]}-knn-metric-$METRIC-knn-loss-k-${K[$DOMAIN]}-type-$TYPE-kd-weight-${KD_WEIGHT[$DOMAIN]}-knn-weight-${KNN_WEIGHT[$DOMAIN]}-ckpt-avg
 
 mkdir -p ${SAVE_DIR}
 
@@ -60,13 +60,13 @@ fairseq-train \
   --eval-bleu-print-samples \
   --best-checkpoint-metric bleu --maximize-best-checkpoint-metric --keep-last-epochs 5 \
   --fp16 --num-workers 0 --seed 142758 \
-  --query-knn-datastore-during-training --kd-loss-weight $KD_WEIGHT --knn-loss-weight $KNN_WEIGHT --knn-loss-type $TYPE \
+  --query-knn-datastore-during-training --kd-loss-weight ${KD_WEIGHT[$DOMAIN]} --knn-loss-weight ${KNN_WEIGHT[$DOMAIN]} --knn-loss-type $TYPE \
   --load-knn-datastore --dstore-filename ${SAVE_DIR} \
   --dstore-size ${DSTORE_SIZE[$DOMAIN]} --dstore-fp16 \
-  --k $K --probe 32 --knn-sim-func do_not_recomp_l2 \
+  --k ${K[$DOMAIN]} --probe 32 --knn-sim-func do_not_recomp_l2 \
   --move-dstore-to-mem --use-gpu-to-search \
   --encoder-append-adapter --decoder-append-adapter \
-  --only-update-adapter --adapter-ffn-dim $FFN --activate-adapter
+  --only-update-adapter --adapter-ffn-dim ${FFN[$DOMAIN]} --activate-adapter
 
 PATIENCE=0
 CHECKPOINT_BEST_TIME=$(date -r $SAVE_DIR/checkpoint_best.pt)
@@ -117,13 +117,13 @@ do
     --eval-bleu-print-samples \
     --best-checkpoint-metric bleu --maximize-best-checkpoint-metric --keep-last-epochs 5 \
     --fp16 --num-workers 0 --seed 142758 \
-    --query-knn-datastore-during-training --kd-loss-weight $KD_WEIGHT --knn-loss-weight $KNN_WEIGHT --knn-loss-type $TYPE \
+    --query-knn-datastore-during-training --kd-loss-weight ${KD_WEIGHT[$DOMAIN]} --knn-loss-weight ${KNN_WEIGHT[$DOMAIN]} --knn-loss-type $TYPE \
     --load-knn-datastore --dstore-filename ${SAVE_DIR} \
     --dstore-size ${DSTORE_SIZE[$DOMAIN]} --dstore-fp16 \
-    --k $K --probe 32 --knn-sim-func do_not_recomp_l2 \
+    --k ${K[$DOMAIN]} --probe 32 --knn-sim-func do_not_recomp_l2 \
     --use-gpu-to-search --move-dstore-to-mem \
     --encoder-append-adapter --decoder-append-adapter \
-    --only-update-adapter --adapter-ffn-dim $FFN --activate-adapter
+    --only-update-adapter --adapter-ffn-dim ${FFN[$DOMAIN]} --activate-adapter
 
     if [ "$(date -r $SAVE_DIR/checkpoint_best.pt)" == "${CHECKPOINT_BEST_TIME}" ]
     then
